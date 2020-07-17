@@ -27,30 +27,19 @@ const Dashboard: React.FC = () => {
 
   useEffect(() => {
     async function loadFoods(): Promise<void> {
-      // TODO LOAD FOODS
+      api.get('/foods').then(response => setFoods(response.data));
     }
 
     loadFoods();
   }, []);
 
-  async function handleAddFood(
-    food: Omit<IFoodPlate, 'id' | 'available'>,
-  ): Promise<void> {
-    try {
-      // TODO ADD A NEW FOOD PLATE TO THE API
-    } catch (err) {
-      console.log(err);
-    }
-  }
-
-  async function handleUpdateFood(
-    food: Omit<IFoodPlate, 'id' | 'available'>,
-  ): Promise<void> {
-    // TODO UPDATE A FOOD PLATE ON THE API
-  }
-
   async function handleDeleteFood(id: number): Promise<void> {
-    // TODO DELETE A FOOD PLATE FROM THE API
+    try {
+      await api.delete(`/foods/${id}`);
+      setFoods(foods.filter(food => food.id !== id));
+    } catch (e) {
+      console.error(e);
+    }
   }
 
   function toggleModal(): void {
@@ -62,7 +51,59 @@ const Dashboard: React.FC = () => {
   }
 
   function handleEditFood(food: IFoodPlate): void {
-    // TODO SET THE CURRENT EDITING FOOD ID IN THE STATE
+    setEditingFood(food);
+    toggleEditModal();
+  }
+
+  async function handleUpdateAvailibility(
+    id: number,
+    available: boolean,
+  ): Promise<void> {
+    try {
+      await api.patch(`/foods/${id}`, { available });
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
+  async function handleUpdateFood(
+    food: Omit<IFoodPlate, 'id' | 'available'>,
+  ): Promise<void> {
+    try {
+      const response = await api.put<IFoodPlate>(
+        `/foods/${editingFood.id}`,
+        food,
+      );
+      const editedFood = response.data;
+
+      if (!editedFood) {
+        return;
+      }
+
+      setFoods(
+        foods.map(foodMap => {
+          if (foodMap.id === editedFood.id) {
+            return editedFood;
+          }
+          return foodMap;
+        }),
+      );
+    } catch (err) {
+      console.log(err);
+    }
+  }
+
+  async function handleAddFood(
+    food: Omit<IFoodPlate, 'id' | 'available'>,
+  ): Promise<void> {
+    try {
+      const newFood = { ...food, available: true };
+
+      const response = await api.post<IFoodPlate>('/foods', newFood);
+      setFoods([...foods, response.data]);
+    } catch (err) {
+      console.log(err);
+    }
   }
 
   return (
@@ -88,6 +129,7 @@ const Dashboard: React.FC = () => {
               food={food}
               handleDelete={handleDeleteFood}
               handleEditFood={handleEditFood}
+              handleUpdateAvailibility={handleUpdateAvailibility}
             />
           ))}
       </FoodsContainer>
